@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="cmn-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<title>Title of the document</title>
+<link rel="stylesheet" href="css/bootstrap.min.css">
+<link rel="stylesheet" href="css/bootstrap-theme.min.css">
+</head>
+<body>
+<nav class="navbar navbar-default">
+	<div class="navbar-brand">
+		匯出排程
+	</div>
+</nav>
+<div class="container-fluid" id="app">
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>資料集ＩＤ</th>
+				<th>描述</th>
+				<th>下次運行時間</th>
+				<th>
+					<button type="button" class="btn btn-primary" v-on:click="createJobModal(true)">新增</button>
+				</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr v-for="job in jobData">
+				<td width="20%">{{ job.dataSetId }}</td>
+				<td width="50%">{{ job.description }}</td>
+				<td width="15%">{{ job.nextExcuteTime }}</td>
+				<td width="15%">
+					<button type="button" class="btn btn-warning btn-sm" v-on:click="deleteJob(job.dataSetId, $event)">刪除</button>
+				</td>
+      		</tr>
+		</tbody>
+	</table>
+	<modal :show.sync="showCreateJobModal" effect="fade" backdrop="false" large="true">
+		<div slot="modal-header" class="modal-header">
+			<button type="button" class="close" aria-label="Close" v-on:click="createJobModal(false)">
+				<span aria-hidden="true">&times;</span>
+			</button>
+        	<h4 class="modal-title">新增匯出排程</h4>
+		</div>
+		<div slot="modal-body" class="modal-body">
+			<form class="form-horizontal">
+				<div class="form-group">
+					<label class="col-sm-2 control-label" for="dataSetId">資料集ID</label>
+					<div class="col-sm-10">
+						<input type="text" class="form-control" id="dataSetId" placeholder="資料集ID" v-model="job.dataSetId">
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-2 control-label" for="description">描述</label>
+					<div class="col-sm-10">
+						<input type="text" class="form-control" id="description" placeholder="描述" v-model="job.description">
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-2 control-label" for="driverClassName">JDBC驅動名稱</label>
+					<div class="col-sm-10">
+						<input type="text" class="form-control" id="driverClassName" placeholder="JDBC驅動名稱" v-model="job.driverClassName">
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-2 control-label" for="url">JDBC連線字串</label>
+					<div class="col-sm-10">
+						<input type="text" class="form-control" id="url" placeholder="JDBC連線字串" v-model="job.url">
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-2 control-label" for="username">JDBC使用者名稱</label>
+					<div class="col-sm-10">
+						<input type="text" class="form-control" id="username" placeholder="JDBC使用者名稱" v-model="job.username">
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-2 control-label" for="password">JDBC使用者密碼</label>
+					<div class="col-sm-10">
+						<input type="password" class="form-control" id="password" placeholder="JDBC使用者密碼" v-model="job.password">
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-2 control-label" for="sql">查詢SQL</label>
+					<div class="col-sm-10">
+						<textarea class="form-control" rows="4" id="sql" placeholder="查詢SQL" v-model="job.sql"></textarea>
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-2 control-label" for="startTime">開始執行時間</label>
+					<div class="col-sm-10">
+						<input type="text" class="form-control" id="startTime" placeholder="格式(2016/08/08-14:30),未輸入為馬上執行" v-model="job.startTime">
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-2 control-label" for="intervalDay">執行間隔(天)</label>
+					<div class="col-sm-10">
+						<input type="number" class="form-control" id="intervalDay" placeholder="執行間隔(天)" v-model="job.intervalDay">
+					</div>
+				</div>
+			</form>
+		</div>
+		<div slot="modal-footer" class="modal-footer">
+			<button type="button" class="btn btn-default" v-on:click="saveJob()">儲存</button>
+		</div>
+	</modal>
+</div>
+<script src="js/jquery-3.1.0.min.js"></script>
+<script src="js/vue.min.js"></script>
+<script src="js/vue-strap.min.js"></script>
+<script type="text/javascript">
+$(function() {
+	var autoFetchHolder;
+	var app = new Vue({
+		el : '#app',
+		data : {
+			job : {},
+			jobData : [],
+			showCreateJobModal : false
+		},
+		methods: {
+			autoFetchData : function () {
+				autoFetchHolder = setTimeout(function () {
+					app.fetchData().always(function () {
+						app.autoFetchData();
+					});
+				}, 5000);
+			},
+			startAutoFetchData : function () {
+				this.fetchData().always(function () {
+					app.autoFetchData();
+				});
+			},
+			stopAutoFetchData : function () {
+				if (autoFetchHolder) {
+					clearTimeout(autoFetchHolder);
+					autoFetchHolder = null;
+				}
+			},
+			fetchData : function () {
+				return $.ajax({
+					url : 'jobs',
+					method : 'GET',
+					cache : false,
+					dataType : 'json'
+				}).done(function (result) {
+					app.jobData = result;
+				});
+			},
+			deleteJob : function (dataSetId) {
+				app.stopAutoFetchData();
+				return $.ajax({
+					url : 'jobs/' + dataSetId,
+					method : 'DELETE',
+					cache: false,
+				}).always(function () {
+					app.startAutoFetchData();
+				});
+			},
+			createJobModal : function (show) {
+				app.job = {};
+				app.showCreateJobModal = show;
+			},
+			saveJob : function () {
+				app.stopAutoFetchData();
+				return $.ajax({
+					url : 'jobs',
+					method : 'PUT',
+					cache : false,
+					dataType : 'json',
+					data : app.job
+				}).done(function (result) {
+					if (result.success) {
+						app.createJobModal(false);
+						app.startAutoFetchData();
+					} else {
+						alert(result.errors.join('\n'));
+					}
+				}).fail(function (jqXHR, textStatus, errorThrown) {
+					alert(errorThrown);
+				}).always(function () {
+					
+				});
+			}
+		},
+		components: VueStrap,
+		ready : function () {
+			this.startAutoFetchData();
+		}
+	});
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+server:
+    port: 8080
+    tomcat:
+        uri-encoding: UTF-8
+spring:
+    http:
+        encoding:
+            charset: UTF-8
+            enabled: true
+            force: true
+    datasource:
+        platform: hsqldb
+        initialize: true
+        continue-on-error: true
+logging:
+    level:
+        iisi.batch: ERROR
+        org.springframework: ERROR
